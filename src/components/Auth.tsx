@@ -3,6 +3,7 @@ import { Icon } from './Icon'
 import { useState } from 'react'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { logError } from '../lib/logger'
+import { PasswordField } from './ui/PasswordField'
 
 export function Login({ team: _team, onLogin }: { team: Worker[]; onLogin: (user: AuthUser) => void }) {
   const [error, setError] = useState('')
@@ -59,7 +60,7 @@ export function Login({ team: _team, onLogin }: { team: Worker[]; onLogin: (user
       <h1 className="font-heading text-[26px] font-bold tracking-[-.8px] text-[#28332d]">Sign in to your workspace</h1>
       <form className="mt-6 grid gap-4" onSubmit={submit}>
         <label className="grid gap-2 text-xs font-bold text-[#69736c]">Email address<input className="h-11 rounded-lg border border-[#dde5de] px-3 text-sm" name="email" type="email" required placeholder="you@parcel.co"/></label>
-        <label className="grid gap-2 text-xs font-bold text-[#69736c]">Password<input className="h-11 rounded-lg border border-[#dde5de] px-3 text-sm" name="password" type="password" required placeholder="Enter your password"/></label>
+        <PasswordField label="Password" placeholder="Enter your password" className="h-11! border-[#dde5de] text-sm" />
         {error && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p>}
         <button className="mt-1 flex h-11 items-center justify-center gap-2 rounded-lg bg-parcel text-sm font-semibold text-white" type="submit">Sign in <Icon name="arrow" size={16}/></button>
       </form>
