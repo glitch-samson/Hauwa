@@ -1,5 +1,6 @@
 import type { Order, OrderStatus, Worker } from '../types'
 import { Icon } from './Icon'
+import { orderStatusLabel } from '../utils'
 
 export function FormModal({ kind, team, onClose, onOrder, onWorker }: {
   kind: 'order' | 'worker'
@@ -45,7 +46,7 @@ export function ActivityModal({ order, team, role, onClose, onStatus, onWorker, 
       <p className="mt-3 rounded-lg bg-[#f7faf7] p-3 text-xs"><strong>Delivery location:</strong> {order.location}</p>
       <div className="mt-4 grid grid-cols-2 gap-3">
         {role === 'owner' && <label className="grid gap-2 text-xs font-bold">Assigned dispatcher<select className="h-10 rounded-lg border border-[#e4e9e4] px-3" value={order.worker} onChange={(event) => onWorker(event.target.value)}>{team.map((worker) => <option key={worker.email} value={worker.name}>{worker.name}</option>)}</select></label>}
-        <label className="grid gap-2 text-xs font-bold">Delivery status<select className="h-10 rounded-lg border border-[#e4e9e4] px-3" value={order.status} onChange={(event) => onStatus(event.target.value as OrderStatus)}>{(['Delivery accepted','Delivery processing','Shipped','Delivered'] as OrderStatus[]).map((status) => <option key={status}>{status}</option>)}</select></label>
+        <label className="grid gap-2 text-xs font-bold">Delivery status<select className="h-10 rounded-lg border border-[#e4e9e4] px-3" value={order.status} onChange={(event) => onStatus(event.target.value as OrderStatus)}>{(['Delivery accepted','Delivery processing','Shipped','Delivered'] as OrderStatus[]).map((status) => <option key={status} value={status}>{orderStatusLabel(status)}</option>)}</select></label>
       </div>
       <button className="mt-4 flex h-9 items-center gap-2 rounded-lg border border-[#dde8df] px-3 text-xs font-bold text-parcel" onClick={onCopy}><Icon name="arrow" size={15}/>Copy customer tracking link</button>
       <div className="mt-5 grid gap-3 border-t border-[#edf0ed] pt-4">{order.events.slice().reverse().map((event) => <div key={`${event.label}-${event.date}`}><strong className="block text-sm">{event.label}</strong><small className="block text-[10px] text-[#89928c]">{event.detail}</small><small className="block text-[9px] text-[#a0a8a2]">{new Date(event.date).toLocaleString()}</small></div>)}</div>

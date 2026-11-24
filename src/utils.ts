@@ -10,6 +10,10 @@ export function historyStatus(status: OrderStatus) {
   return 'Pending'
 }
 
+export function orderStatusLabel(status: OrderStatus) {
+  return status === 'Delivery accepted' ? 'Order accepted' : status
+}
+
 export function formatNaira(amount: number) {
   return new Intl.NumberFormat('en-NG', {
     style: 'currency',

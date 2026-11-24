@@ -1,9 +1,9 @@
 import type { Order, OrderStatus, Worker } from '../types'
 import { Icon } from './Icon'
-import { formatNaira, historyStatus } from '../utils'
+import { formatNaira, historyStatus, orderStatusLabel } from '../utils'
 
 export function StatusPill({ status, history = false }: { status: OrderStatus; history?: boolean }) {
-  const label = history ? historyStatus(status) : status
+  const label = history ? historyStatus(status) : orderStatusLabel(status)
   const color = label === 'Delivered' ? 'bg-[#edf4f0] text-[#648374]'
     : label === 'Not delivered' ? 'bg-[#fbf0e8] text-[#a36f52]'
     : label === 'Pending' ? 'bg-[#f8f3e8] text-[#8f7a58]'
@@ -30,7 +30,7 @@ export function OrdersTable({ orders, team, role, onSelect, onStatus, onWorker, 
       <td className="px-4 py-3 text-[#8e9691]">{new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(new Date(order.date))}</td>
       <td className="px-4 py-3"><StatusPill status={order.status}/></td>
       <td className="px-4 py-3">{role === 'owner' ? <select className="h-8 max-w-28 rounded-md border border-[#e4e9e4] px-2 text-[10px]" value={order.worker} onChange={(event) => onWorker(order.id, event.target.value)}>{team.map((worker) => <option key={worker.email} value={worker.name}>{worker.name}</option>)}</select> : <strong>{order.worker}</strong>}</td>
-      <td className="px-4 py-3"><div className="flex items-center justify-end gap-1"><select aria-label={`Change status for ${order.id}`} className="h-8 max-w-36 rounded-md border border-[#e4e9e4] px-2 text-[10px]" value={order.status} onChange={(event) => onStatus(order.id, event.target.value as OrderStatus)}>{(['Delivery accepted','Delivery processing','Shipped','Delivered'] as OrderStatus[]).map((status) => <option key={status}>{status}</option>)}</select><button className="grid size-8 place-items-center text-[#7f8882]" onClick={() => onSelect(order)} aria-label={`View ${order.id}`}><Icon name="dots" size={18}/></button></div></td>
+      <td className="px-4 py-3"><div className="flex items-center justify-end gap-1"><select aria-label={`Change status for ${order.id}`} className="h-8 max-w-36 rounded-md border border-[#e4e9e4] px-2 text-[10px]" value={order.status} onChange={(event) => onStatus(order.id, event.target.value as OrderStatus)}>{(['Delivery accepted','Delivery processing','Shipped','Delivered'] as OrderStatus[]).map((status) => <option key={status} value={status}>{orderStatusLabel(status)}</option>)}</select><button className="grid size-8 place-items-center text-[#7f8882]" onClick={() => onSelect(order)} aria-label={`View ${order.id}`}><Icon name="dots" size={18}/></button></div></td>
     </tr>)}</tbody>
   </table></div>
 }
