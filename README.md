@@ -1,6 +1,8 @@
-# Parcel
+# Hauwa
 
-A React + Vite order dashboard for small businesses to create orders, assign dispatchers, and track each order through delivery.
+Hauwa's business management system web app.
+
+This React and Vite application manages orders, delivery assignments, order history, finances, team access, and customer tracking.
 
 ## Run locally
 
