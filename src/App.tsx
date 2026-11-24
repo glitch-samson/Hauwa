@@ -46,7 +46,7 @@ export default function App() {
   })
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('All orders')
-  const [modal, setModal] = useState<'order' | 'worker' | null>(null)
+  const [modal, setModal] = useState<'order' | null>(null)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [toast, setToast] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
@@ -100,7 +100,7 @@ export default function App() {
         }
 
         const [{ data: teamRows, error: teamError }, { data: orderRows, error: orderError }] = await Promise.all([
-          supabase!.from('team_members').select('id,name,email,color'),
+          supabase!.from('profiles').select('id,name,email,role').eq('role', 'worker'),
           supabase!.from('orders').select('id,reference_code,tracking_token,customer_name,customer_email,delivery_location,product,amount,status,created_at,assigned_worker_id,team_members(name),order_events(label,detail,created_at)').order('created_at', { ascending: false }),
         ])
         if (teamError) logError('Loading team members', teamError)
@@ -110,14 +110,15 @@ export default function App() {
 
         if (teamRows) {
           setTeam(teamRows.map((worker) => ({
+            id: worker.id,
             name: worker.name,
             email: worker.email,
             password: '',
-            color: worker.color,
+            color: 'bg-[#e5edf2] text-[#537087]',
           })))
         }
         if (orderRows) {
-          setOrders(orderRows.map((order) => {
+          const mappedOrders = orderRows.map((order) => {
             const workerRelation = order.team_members as { name?: string } | { name?: string }[] | null
             const workerName = Array.isArray(workerRelation)
               ? workerRelation[0]?.name
@@ -139,7 +140,10 @@ export default function App() {
                 detail: event.detail,
               })),
             }
-          }))
+          })
+          setOrders(profile?.role === 'worker'
+            ? mappedOrders.filter((order) => order.worker === profile.name)
+            : mappedOrders)
         }
       } catch (loadError) {
         logError('Loading Supabase application data', loadError)
@@ -249,29 +253,6 @@ export default function App() {
     setModal(null)
     setPage('Orders')
   }
-  const addWorker = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const data = new FormData(event.currentTarget)
-    const worker = {
-      name: String(data.get('name')).trim(),
-      email: String(data.get('email')).trim(),
-      password: String(data.get('password')),
-      color: 'bg-[#e5edf2] text-[#537087]',
-    }
-    if (isSupabaseConfigured && supabase) {
-      void supabase.from('team_members').insert({
-        name: worker.name,
-        email: worker.email,
-        color: worker.color,
-      }).then(({ error }) => {
-        if (error) logError(`Adding team member ${worker.email}`, error)
-      })
-    }
-    setTeam((current) => [...current, {
-      ...worker,
-    }])
-    setModal(null)
-  }
   const exportHistory = () => {
     try {
       const escape = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`
@@ -336,9 +317,9 @@ export default function App() {
       {page === 'Orders' && <OrdersPage orders={filteredOrders} team={team} authUser={authUser} filter={filter} setFilter={setFilter} onNewOrder={() => setModal('order')} onSelect={setSelectedOrder} onStatus={updateStatus} onWorker={updateWorker}/>}
       {page === 'History' && <HistoryPage orders={orders} onExport={exportHistory} onSelect={setSelectedOrder}/>}
       {page === 'Finances' && authUser.role === 'owner' && <FinancesPage orders={orders} onExport={exportHistory} onSelect={setSelectedOrder}/>}
-      {page === 'Team' && authUser.role === 'owner' && <TeamPage team={team} orders={orders} authUser={authUser} onAdd={() => setModal('worker')}/>}
+      {page === 'Team' && authUser.role === 'owner' && <TeamPage team={team} orders={orders}/>}
     </AppShell>
-    {modal && <FormModal kind={modal} team={team} onClose={() => setModal(null)} onOrder={addOrder} onWorker={addWorker}/>}
+    {modal && <FormModal team={team} onClose={() => setModal(null)} onOrder={addOrder}/>}
     {selectedOrder && <ActivityModal order={selectedOrder} team={team} role={authUser.role} onClose={() => setSelectedOrder(null)} onStatus={(status) => updateStatus(selectedOrder.id, status)} onWorker={(worker) => updateWorker(selectedOrder.id, worker)} onCopy={() => copyTracking(selectedOrder.id)}/>}
     {toast && <Toast message={toast}/>}
   </>

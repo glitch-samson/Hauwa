@@ -14,7 +14,8 @@ export function Sidebar({ page, setPage, authUser, orderCount, logout, toast }: 
     ? [['Overview', 'grid'], ['Orders', 'box'], ['History', 'clock'], ['Finances', 'wallet'], ['Team', 'users']]
     : [['Orders', 'box'], ['History', 'clock']]
 
-  return <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col border-r border-[#ecefeb] bg-white px-[18px] py-[27px] md:flex">
+  return <>
+  <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col border-r border-[#ecefeb] bg-white px-[18px] py-[27px] md:flex">
     <button className="mb-12 ml-2 flex items-center gap-2.5 text-[24px] font-extrabold tracking-[-1.2px]" onClick={() => setPage(authUser.role === 'owner' ? 'Overview' : 'Orders')}>
       <span className="grid size-[34px] place-items-center rounded-[11px] bg-parcel text-white"><Icon name="package" size={22}/></span>
       <span>parcel<span className="text-[#82a78d]">.</span></span>
@@ -39,4 +40,31 @@ export function Sidebar({ page, setPage, authUser, orderCount, logout, toast }: 
       </button>
     </div>
   </aside>
+  <nav
+    className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e4e9e4] bg-white/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden"
+    aria-label="Mobile navigation"
+  >
+    <div className={`grid ${links.length === 5 ? 'grid-cols-5' : 'grid-cols-2'} mx-auto max-w-lg`}>
+      {links.map(([label, icon]) => <button
+        key={label}
+        type="button"
+        onClick={() => setPage(label)}
+        aria-current={page === label ? 'page' : undefined}
+        className={`relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[9px] font-semibold ${
+          page === label ? 'bg-[#edf4ef] text-[#194733]' : 'text-[#7f8882]'
+        }`}
+      >
+        <span className="relative">
+          <Icon name={icon} size={21}/>
+          {label === 'Orders' && orderCount > 0 && (
+            <span className="absolute -right-3 -top-2 grid min-w-4 place-items-center rounded-full bg-parcel px-1 text-[8px] font-bold leading-4 text-white">
+              {orderCount}
+            </span>
+          )}
+        </span>
+        <span>{label}</span>
+      </button>)}
+    </div>
+  </nav>
+  </>
 }

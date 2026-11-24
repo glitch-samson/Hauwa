@@ -19,7 +19,7 @@ export function AppShell({ children, page, setPage, authUser, orderCount, logout
     <Sidebar page={page} setPage={setPage} authUser={authUser} orderCount={orderCount} logout={logout} toast={toast}/>
     <main className="min-h-screen md:ml-[248px]">
       <TopBar page={page} authUser={authUser} query={query} setQuery={setQuery} searchRef={searchRef} toast={toast}/>
-      <div className="mx-auto max-w-[1120px] px-5 py-8 md:px-[4.3%]">{children}</div>
+      <div className="mx-auto max-w-[1120px] px-5 pb-[92px] pt-5 md:px-[4.3%] md:pb-8 md:pt-8">{children}</div>
     </main>
   </div>
 }

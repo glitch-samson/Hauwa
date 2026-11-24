@@ -16,6 +16,6 @@ export type Order = {
   events: OrderEvent[]
 }
 
-export type Worker = { name: string; email: string; password: string; color: string }
+export type Worker = { id?: string; name: string; email: string; password: string; color: string }
 export type Page = 'Overview' | 'Orders' | 'History' | 'Finances' | 'Team'
 export type AuthUser = { role: 'owner' | 'worker'; name: string; email: string }

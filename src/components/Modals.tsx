@@ -2,17 +2,15 @@ import type { Order, OrderStatus, Worker } from '../types'
 import { Icon } from './Icon'
 import { orderStatusLabel } from '../utils'
 
-export function FormModal({ kind, team, onClose, onOrder, onWorker }: {
-  kind: 'order' | 'worker'
+export function FormModal({ team, onClose, onOrder }: {
   team: Worker[]
   onClose: () => void
   onOrder: (event: React.FormEvent<HTMLFormElement>) => void
-  onWorker: (event: React.FormEvent<HTMLFormElement>) => void
 }) {
   return <div className="fixed inset-0 z-50 grid place-items-center bg-[#1f3028]/30 p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
     <section role="dialog" aria-modal="true" className="max-h-[92vh] w-full max-w-[520px] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
-      <div className="flex items-start justify-between"><div><p className="mb-2 text-[10px] font-bold tracking-[1.15px] text-[#a0a8a2]">{kind === 'order' ? 'A NEW DELIVERY' : 'GROW YOUR TEAM'}</p><h2 className="font-heading text-2xl font-bold">{kind === 'order' ? 'Create an order' : 'Add a teammate'}</h2></div><button className="grid size-8 place-items-center rounded-lg" onClick={onClose} aria-label="Close dialog"><Icon name="close"/></button></div>
-      {kind === 'order' ? <form onSubmit={onOrder} className="mt-5 grid grid-cols-2 gap-4">
+      <div className="flex items-start justify-between"><div><p className="mb-2 text-[10px] font-bold tracking-[1.15px] text-[#a0a8a2]">A NEW DELIVERY</p><h2 className="font-heading text-2xl font-bold">Create an order</h2></div><button className="grid size-8 place-items-center rounded-lg" onClick={onClose} aria-label="Close dialog"><Icon name="close"/></button></div>
+      <form onSubmit={onOrder} className="mt-5 grid grid-cols-2 gap-4">
         <label className="grid gap-2 text-xs font-bold">Customer name<input className="h-10 rounded-lg border border-[#e4e9e4] px-3" name="customer" required placeholder="e.g. Alex Morgan"/></label>
         <label className="grid gap-2 text-xs font-bold">Customer email<input className="h-10 rounded-lg border border-[#e4e9e4] px-3" name="email" type="email" required placeholder="alex@example.com"/></label>
         <label className="col-span-2 grid gap-2 text-xs font-bold">Product<input className="h-10 rounded-lg border border-[#e4e9e4] px-3" name="product" required placeholder="What did they order?"/></label>
@@ -20,12 +18,7 @@ export function FormModal({ kind, team, onClose, onOrder, onWorker }: {
         <label className="grid gap-2 text-xs font-bold">Order value (NGN)<input className="h-10 rounded-lg border border-[#e4e9e4] px-3" name="amount" type="number" min="0" step="0.01" required placeholder="0.00"/></label>
         <label className="grid gap-2 text-xs font-bold">Assign dispatcher<select className="h-10 rounded-lg border border-[#e4e9e4] px-3" name="worker" required defaultValue={team[0]?.name ?? ''}>{team.map((worker) => <option key={worker.email} value={worker.name}>{worker.name}</option>)}</select></label>
         <div className="col-span-2 mt-2 flex justify-end gap-2"><button type="button" className="h-10 rounded-lg border border-[#e4e9e4] px-4 text-xs" onClick={onClose}>Cancel</button><button type="submit" className="flex h-10 items-center gap-2 rounded-lg bg-parcel px-4 text-xs font-semibold text-white" disabled={!team.length}><Icon name="plus" size={16}/>Create order</button></div>
-      </form> : <form onSubmit={onWorker} className="mt-5 grid grid-cols-2 gap-4">
-        <label className="grid gap-2 text-xs font-bold">Full name<input className="h-10 rounded-lg border border-[#e4e9e4] px-3" name="name" required placeholder="e.g. Taylor Reed"/></label>
-        <label className="grid gap-2 text-xs font-bold">Email address<input className="h-10 rounded-lg border border-[#e4e9e4] px-3" name="email" type="email" required placeholder="taylor@example.com"/></label>
-        <label className="col-span-2 grid gap-2 text-xs font-bold">Password<input className="h-10 rounded-lg border border-[#e4e9e4] px-3" name="password" type="password" minLength={6} required placeholder="Create a login password"/></label>
-        <div className="col-span-2 mt-2 flex justify-end gap-2"><button type="button" className="h-10 rounded-lg border border-[#e4e9e4] px-4 text-xs" onClick={onClose}>Cancel</button><button type="submit" className="flex h-10 items-center gap-2 rounded-lg bg-parcel px-4 text-xs font-semibold text-white"><Icon name="plus" size={16}/>Add member</button></div>
-      </form>}
+      </form>
     </section>
   </div>
 }
