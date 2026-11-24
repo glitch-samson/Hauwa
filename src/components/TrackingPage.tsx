@@ -3,6 +3,7 @@ import { Icon } from './Icon'
 import { useEffect, useState } from 'react'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { logError } from '../lib/logger'
+import { orderStatusLabel } from '../utils'
 
 export function TrackingPage({ order, trackingToken }: { order: Order | null; trackingToken?: string }) {
   const [publicOrder, setPublicOrder] = useState<Order | null>(order)
@@ -50,8 +51,8 @@ export function TrackingPage({ order, trackingToken }: { order: Order | null; tr
         <h1 className="mt-2 font-heading text-[30px] font-bold">{resolvedOrder.id}</h1>
         <p className="mt-1 text-sm text-[#818a84]">{resolvedOrder.product}</p>
         <p className="mt-3 text-xs text-[#5f6962]"><strong>Delivery location:</strong> {resolvedOrder.location}</p>
-        <div className="mt-5 inline-flex rounded-full bg-[#edf4ef] px-3 py-2 text-xs font-bold text-[#456352]">{resolvedOrder.status}</div>
-        <div className="my-7 grid grid-cols-4 gap-2">{stages.map((stage, index) => <div key={stage} className={`grid justify-items-center gap-2 text-center text-[9px] ${index <= active ? 'text-parcel' : 'text-[#adb4af]'}`}><span className={`grid size-[30px] place-items-center rounded-full border ${index <= active ? 'border-parcel bg-parcel text-white' : 'border-[#dde4de] bg-white'}`}>{index < active ? <Icon name="check" size={16}/> : index + 1}</span><strong>{stage}</strong></div>)}</div>
+        <div className="mt-5 inline-flex rounded-full bg-[#edf4ef] px-3 py-2 text-xs font-bold text-[#456352]">{orderStatusLabel(resolvedOrder.status)}</div>
+        <div className="my-7 grid grid-cols-4 gap-2">{stages.map((stage, index) => <div key={stage} className={`grid justify-items-center gap-2 text-center text-[9px] ${index <= active ? 'text-parcel' : 'text-[#adb4af]'}`}><span className={`grid size-[30px] place-items-center rounded-full border ${index <= active ? 'border-parcel bg-parcel text-white' : 'border-[#dde4de] bg-white'}`}>{index < active ? <Icon name="check" size={16}/> : index + 1}</span><strong>{orderStatusLabel(stage)}</strong></div>)}</div>
         <div className="grid gap-3 border-t border-[#edf0ed] pt-5">{resolvedOrder.events.slice().reverse().map((event) => <div key={`${event.label}-${event.date}`}><strong className="block text-sm">{event.label}</strong><small className="block text-[9px] text-[#969e98]">{new Date(event.date).toLocaleString()}</small></div>)}</div>
       </> : <div className="py-8 text-center"><h1 className="text-2xl font-bold">Order not found</h1><p className="mt-2 text-sm text-[#89928c]">Check the tracking link or contact the store.</p></div>}
     </section>
