@@ -2,34 +2,41 @@ import type { Order, OrderStatus } from '../types'
 import { Icon } from './Icon'
 import { useEffect, useState } from 'react'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
+import { logError } from '../lib/logger'
 
 export function TrackingPage({ order, trackingToken }: { order: Order | null; trackingToken?: string }) {
   const [publicOrder, setPublicOrder] = useState<Order | null>(order)
 
   useEffect(() => {
     if (order || !trackingToken || !isSupabaseConfigured || !supabase) return
-    void supabase.rpc('get_public_tracking', { p_tracking_token: trackingToken }).then(({ data }) => {
-      const row = data?.[0] as {
-        reference_code: string
-        product: string
-        delivery_location: string
-        status: OrderStatus
-      } | undefined
-      if (row) {
-        setPublicOrder({
-          id: row.reference_code,
-          customer: '',
-          email: '',
-          location: row.delivery_location,
-          product: row.product,
-          amount: 0,
-          date: new Date().toISOString(),
-          status: row.status,
-          worker: '',
-          events: [],
-        })
+    void (async () => {
+      try {
+        const { data, error } = await supabase.rpc('get_public_tracking', { p_tracking_token: trackingToken })
+        if (error) logError('Loading public order tracking', error)
+        const row = data?.[0] as {
+          reference_code: string
+          product: string
+          delivery_location: string
+          status: OrderStatus
+        } | undefined
+        if (row) {
+          setPublicOrder({
+            id: row.reference_code,
+            customer: '',
+            email: '',
+            location: row.delivery_location,
+            product: row.product,
+            amount: 0,
+            date: new Date().toISOString(),
+            status: row.status,
+            worker: '',
+            events: [],
+          })
+        }
+      } catch (trackingError) {
+        logError('Unexpected public tracking error', trackingError)
       }
-    })
+    })()
   }, [order, trackingToken])
 
   const resolvedOrder = publicOrder

@@ -2,6 +2,7 @@ import type { AuthUser, Worker } from '../types'
 import { Icon } from './Icon'
 import { useState } from 'react'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
+import { logError } from '../lib/logger'
 
 export function Login({ team: _team, onLogin }: { team: Worker[]; onLogin: (user: AuthUser) => void }) {
   const [error, setError] = useState('')
@@ -9,35 +10,46 @@ export function Login({ team: _team, onLogin }: { team: Worker[]; onLogin: (user
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
-    const formData = new FormData(event.currentTarget)
-    const email = String(formData.get('email')).trim().toLowerCase()
-    const password = String(formData.get('password'))
-    if (!isSupabaseConfigured || !supabase) {
-      setError('Supabase environment variables are not configured.')
-      return
-    }
-    const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-    if (signInError) {
-      setError(signInError.message)
-      return
-    }
-    if (!authData.user) {
-      setError('Unable to start the session.')
-      return
-    }
+    try {
+      const formData = new FormData(event.currentTarget)
+      const email = String(formData.get('email')).trim().toLowerCase()
+      const password = String(formData.get('password'))
+      if (!isSupabaseConfigured || !supabase) {
+        const configurationError = new Error('Supabase environment variables are not configured.')
+        logError('Authentication configuration', configurationError)
+        setError(configurationError.message)
+        return
+      }
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      if (signInError) {
+        logError('Sign-in failed', signInError)
+        setError(signInError.message)
+        return
+      }
+      if (!authData.user) {
+        const sessionError = new Error('Unable to start the session.')
+        logError('Sign-in session', sessionError)
+        setError(sessionError.message)
+        return
+      }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('name, email, role')
-      .eq('id', authData.user.id)
-      .single()
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('name, email, role')
+        .eq('id', authData.user.id)
+        .single()
+      if (profileError) logError('Loading signed-in profile', profileError)
 
-    const user: AuthUser = {
-      role: profile?.role === 'owner' ? 'owner' : 'worker',
-      name: profile?.name || authData.user.email?.split('@')[0] || 'Team member',
-      email: profile?.email || authData.user.email || email,
+      const user: AuthUser = {
+        role: profile?.role === 'owner' ? 'owner' : 'worker',
+        name: profile?.name || authData.user.email?.split('@')[0] || 'Team member',
+        email: profile?.email || authData.user.email || email,
+      }
+      onLogin(user)
+    } catch (submitError) {
+      logError('Unexpected authentication error', submitError)
+      setError('Sign-in could not be completed.')
     }
-    onLogin(user)
   }
 
   return <main className="grid min-h-screen place-items-center bg-[#f4f7f3] p-6">

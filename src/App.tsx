@@ -13,6 +13,7 @@ import { FinancesPage } from './pages/FinancesPage'
 import { TeamPage } from './pages/TeamPage'
 import { formatNaira, historyStatus } from './utils'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
+import { logError } from './lib/logger'
 
 function normalizeStatus(status: string): OrderStatus {
   if (status === 'Processing' || status === 'Delivery accepted') return 'Delivery accepted'
@@ -29,6 +30,7 @@ export default function App() {
       const saved = sessionStorage.getItem('parcel-auth')
       return saved ? JSON.parse(saved) as AuthUser : null
     } catch {
+      logError('Reading owner session', 'Stored session data is invalid.')
       sessionStorage.removeItem('parcel-auth')
       return null
     }
@@ -38,6 +40,7 @@ export default function App() {
       const saved = sessionStorage.getItem('parcel-auth')
       return saved ? (JSON.parse(saved) as AuthUser).role === 'worker' ? 'Orders' : 'Overview' : 'Overview'
     } catch {
+      logError('Reading saved page session', 'Stored session data is invalid.')
       return 'Overview'
     }
   })
@@ -68,70 +71,78 @@ export default function App() {
 
     let active = true
     const loadBackend = async () => {
-      const { data: sessionData } = await supabase!.auth.getSession()
-      if (!active) return
+      try {
+        const { data: sessionData, error: sessionError } = await supabase!.auth.getSession()
+        if (sessionError) logError('Loading Supabase session', sessionError)
+        if (!active) return
 
-      if (!sessionData.session?.user) {
-        setAuthUser(null)
-        setOrders(initialOrders)
-        setTeam(initialWorkers)
-        return
-      }
+        if (!sessionData.session?.user) {
+          setAuthUser(null)
+          setOrders(initialOrders)
+          setTeam(initialWorkers)
+          return
+        }
 
-      const userId = sessionData.session.user.id
-      const { data: profile } = await supabase!
-        .from('profiles')
-        .select('name,email,role')
-        .eq('id', userId)
-        .single()
+        const userId = sessionData.session.user.id
+        const { data: profile, error: profileError } = await supabase!
+          .from('profiles')
+          .select('name,email,role')
+          .eq('id', userId)
+          .single()
+        if (profileError) logError('Loading current profile', profileError)
 
-      if (active && profile) {
-        setAuthUser({
-          role: profile.role === 'owner' ? 'owner' : 'worker',
-          name: profile.name,
-          email: profile.email,
-        })
-      }
+        if (active && profile) {
+          setAuthUser({
+            role: profile.role === 'owner' ? 'owner' : 'worker',
+            name: profile.name,
+            email: profile.email,
+          })
+        }
 
-      const [{ data: teamRows }, { data: orderRows }] = await Promise.all([
-        supabase!.from('team_members').select('id,name,email,color'),
-        supabase!.from('orders').select('id,reference_code,tracking_token,customer_name,customer_email,delivery_location,product,amount,status,created_at,assigned_worker_id,team_members(name),order_events(label,detail,created_at)').order('created_at', { ascending: false }),
-      ])
+        const [{ data: teamRows, error: teamError }, { data: orderRows, error: orderError }] = await Promise.all([
+          supabase!.from('team_members').select('id,name,email,color'),
+          supabase!.from('orders').select('id,reference_code,tracking_token,customer_name,customer_email,delivery_location,product,amount,status,created_at,assigned_worker_id,team_members(name),order_events(label,detail,created_at)').order('created_at', { ascending: false }),
+        ])
+        if (teamError) logError('Loading team members', teamError)
+        if (orderError) logError('Loading orders', orderError)
 
-      if (!active) return
+        if (!active) return
 
-      if (teamRows) {
-        setTeam(teamRows.map((worker) => ({
-          name: worker.name,
-          email: worker.email,
-          password: '',
-          color: worker.color,
-        })))
-      }
-      if (orderRows) {
-        setOrders(orderRows.map((order) => {
-          const workerRelation = order.team_members as { name?: string } | { name?: string }[] | null
-          const workerName = Array.isArray(workerRelation)
-            ? workerRelation[0]?.name
-            : workerRelation?.name
-          return {
-          id: order.reference_code,
-          trackingToken: order.tracking_token,
-          customer: order.customer_name,
-          email: order.customer_email,
-          location: order.delivery_location,
-          product: order.product,
-          amount: Number(order.amount),
-          date: order.created_at,
-          status: normalizeStatus(order.status),
-          worker: workerName || 'Unassigned',
-          events: (order.order_events || []).map((event: { label: string; detail: string; created_at: string }) => ({
-            label: event.label,
-            date: event.created_at,
-            detail: event.detail,
-          })),
-          }
-        }))
+        if (teamRows) {
+          setTeam(teamRows.map((worker) => ({
+            name: worker.name,
+            email: worker.email,
+            password: '',
+            color: worker.color,
+          })))
+        }
+        if (orderRows) {
+          setOrders(orderRows.map((order) => {
+            const workerRelation = order.team_members as { name?: string } | { name?: string }[] | null
+            const workerName = Array.isArray(workerRelation)
+              ? workerRelation[0]?.name
+              : workerRelation?.name
+            return {
+              id: order.reference_code,
+              trackingToken: order.tracking_token,
+              customer: order.customer_name,
+              email: order.customer_email,
+              location: order.delivery_location,
+              product: order.product,
+              amount: Number(order.amount),
+              date: order.created_at,
+              status: normalizeStatus(order.status),
+              worker: workerName || 'Unassigned',
+              events: (order.order_events || []).map((event: { label: string; detail: string; created_at: string }) => ({
+                label: event.label,
+                date: event.created_at,
+                detail: event.detail,
+              })),
+            }
+          }))
+        }
+      } catch (loadError) {
+        logError('Loading Supabase application data', loadError)
       }
     }
 
@@ -162,18 +173,26 @@ export default function App() {
       ? { ...order, status, events: [...order.events, { label: status, date: new Date().toISOString(), detail: 'Customer tracking update prepared' }] }
       : order))
     if (isSupabaseConfigured && supabase) {
-      void supabase.rpc('update_order_status', { p_order_id: orderId, p_status: status })
+      void supabase.rpc('update_order_status', { p_order_id: orderId, p_status: status }).then(({ error }) => {
+        if (error) logError(`Updating order ${orderId} status to ${status}`, error)
+      })
     }
   }
   const updateWorker = (orderId: string, worker: string) => {
     setOrders((current) => current.map((order) => order.id === orderId ? { ...order, worker } : order))
     if (isSupabaseConfigured && supabase) {
       void (async () => {
-        const member = team.find((item) => item.name === worker)
-        if (!member) return
-        const { data: memberRow } = await supabase.from('team_members').select('id').eq('email', member.email).single()
-        if (memberRow) {
-          await supabase.from('orders').update({ assigned_worker_id: memberRow.id }).eq('reference_code', orderId)
+        try {
+          const member = team.find((item) => item.name === worker)
+          if (!member) return
+          const { data: memberRow, error: memberError } = await supabase.from('team_members').select('id').eq('email', member.email).single()
+          if (memberError) logError(`Loading team member ${worker}`, memberError)
+          if (memberRow) {
+            const { error: assignmentError } = await supabase.from('orders').update({ assigned_worker_id: memberRow.id }).eq('reference_code', orderId)
+            if (assignmentError) logError(`Assigning order ${orderId} to ${worker}`, assignmentError)
+          }
+        } catch (assignmentError) {
+          logError(`Unexpected assignment error for order ${orderId}`, assignmentError)
         }
       })()
     }
@@ -185,20 +204,31 @@ export default function App() {
     const worker = team.find((member) => member.name === workerName)
     if (isSupabaseConfigured && supabase) {
       void (async () => {
-        const workerRow = worker
-          ? await supabase.from('team_members').select('id').eq('email', worker.email).maybeSingle()
-          : null
-        await supabase.rpc('create_order', {
-          p_customer_name: String(data.get('customer')),
-          p_customer_email: String(data.get('email')),
-          p_delivery_location: String(data.get('location')).trim(),
-          p_product: String(data.get('product')),
-          p_amount: Number(data.get('amount')),
-          p_assigned_worker_id: workerRow?.data?.id ?? null,
-        })
-        showToast('Order created')
-        setModal(null)
-        setPage('Orders')
+        try {
+          const workerRow = worker
+            ? await supabase.from('team_members').select('id').eq('email', worker.email).maybeSingle()
+            : null
+          if (workerRow?.error) logError(`Loading dispatcher ${workerName}`, workerRow.error)
+          const { error: createError } = await supabase.rpc('create_order', {
+            p_customer_name: String(data.get('customer')),
+            p_customer_email: String(data.get('email')),
+            p_delivery_location: String(data.get('location')).trim(),
+            p_product: String(data.get('product')),
+            p_amount: Number(data.get('amount')),
+            p_assigned_worker_id: workerRow?.data?.id ?? null,
+          })
+          if (createError) {
+            logError('Creating order', createError)
+            showToast('Could not create order')
+            return
+          }
+          showToast('Order created')
+          setModal(null)
+          setPage('Orders')
+        } catch (createError) {
+          logError('Unexpected order creation error', createError)
+          showToast('Could not create order')
+        }
       })()
       return
     }
@@ -233,6 +263,8 @@ export default function App() {
         name: worker.name,
         email: worker.email,
         color: worker.color,
+      }).then(({ error }) => {
+        if (error) logError(`Adding team member ${worker.email}`, error)
       })
     }
     setTeam((current) => [...current, {
@@ -241,18 +273,23 @@ export default function App() {
     setModal(null)
   }
   const exportHistory = () => {
-    const escape = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`
-    const rows = [
-      ['Order', 'Customer', 'Email', 'Delivery location', 'Product', 'Amount', 'Status', 'Dispatcher', 'Date'],
-      ...orders.map((order) => [order.id, order.customer, order.email, order.location, order.product, formatNaira(order.amount), historyStatus(order.status), order.worker, new Date(order.date).toISOString()]),
-    ]
-    const url = URL.createObjectURL(new Blob([rows.map((row) => row.map(escape).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' }))
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `parcel-order-history-${new Date().toISOString().slice(0, 10)}.csv`
-    link.click()
-    URL.revokeObjectURL(url)
-    showToast('Order history exported')
+    try {
+      const escape = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`
+      const rows = [
+        ['Order', 'Customer', 'Email', 'Delivery location', 'Product', 'Amount', 'Status', 'Dispatcher', 'Date'],
+        ...orders.map((order) => [order.id, order.customer, order.email, order.location, order.product, formatNaira(order.amount), historyStatus(order.status), order.worker, new Date(order.date).toISOString()]),
+      ]
+      const url = URL.createObjectURL(new Blob([rows.map((row) => row.map(escape).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' }))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `parcel-order-history-${new Date().toISOString().slice(0, 10)}.csv`
+      link.click()
+      URL.revokeObjectURL(url)
+      showToast('Order history exported')
+    } catch (exportError) {
+      logError('Exporting order history', exportError)
+      showToast('Could not export order history')
+    }
   }
   const copyTracking = async (orderId: string) => {
     const order = orders.find((item) => item.id === orderId)
@@ -261,14 +298,17 @@ export default function App() {
     try {
       await navigator.clipboard.writeText(url)
       showToast('Customer tracking link copied')
-    } catch {
+    } catch (clipboardError) {
+      logError('Copying customer tracking link', clipboardError)
       showToast(url)
     }
   }
   const logout = () => {
     sessionStorage.removeItem('parcel-auth')
     if (isSupabaseConfigured && supabase) {
-      void supabase.auth.signOut()
+      void supabase.auth.signOut().then(({ error }) => {
+        if (error) logError('Signing out', error)
+      })
     }
     setAuthUser(null)
     setPage('Overview')
