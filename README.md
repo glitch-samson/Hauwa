@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Configure Supabase with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, then apply the migration in `supabase/migrations`. Use the **New order** form to add a customer and assign a dispatcher. Team members can update delivery status, while owners can manage orders, finances, history, and team access.
+Configure Supabase with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, then apply the migration in `supabase/migrations`. Use the **New order** form to add a customer and assign a dispatcher. Team members can update delivery status, while owners can manage orders, finances, history, and team access.
 
 ## Email updates
 
